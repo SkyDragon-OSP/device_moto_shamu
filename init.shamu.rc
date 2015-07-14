@@ -17,6 +17,7 @@
 import init.shamu.usb.rc
 import init.shamu.power.rc
 import init.shamu.diag.rc
+import init.performance_profiles.rc
 
 on early-init
     mkdir /firmware 0771 system system
@@ -127,6 +128,11 @@ on early-boot
     write /sys/bus/msm_subsys/devices/subsys3/recovery_policy "skip_restart"
 
 on boot
+    write /sys/block/mmcblk0/queue/nomerges 1
+    write /sys/block/mmcblk0/queue/rq_affinity 2
+    write /sys/block/mmcblk0/queue/add_random 0
+    write /sys/block/mmcblk0/queue/read_ahead_kb 1024
+
     insmod /system/lib/modules/adsprpc.ko
     insmod /system/lib/modules/mhi.ko
     chown bluetooth net_bt_stack /sys/module/bluetooth_power/parameters/power
@@ -247,24 +253,28 @@ on boot
     chown media media /sys/devices/c55_ctrl/gpio_core/value
     chown media media /sys/devices/c55_ctrl/gpio_reset/value
 
-    # LED permissions
-    chown system system /sys/class/leds/red/brightness
-    chown system system /sys/class/leds/green/brightness
-    chown system system /sys/class/leds/blue/brightness
-    chmod 664 /sys/class/leds/red/brightness
-    chmod 664 /sys/class/leds/green/brightness
-    chmod 664 /sys/class/leds/blue/brightness
+    # Prevent permission denied error for telephony
+    chmod 0644 /proc/cmdline
 
-# subsystem ramdump collection
-on property:persist.sys.qc.sub.rdump.on=*
+    # LED permissions
+    chown system system /sys/class/leds/charging/brightness
+    chown system system /sys/class/leds/charging/max_brightness
+    write /sys/class/leds/charging/trigger battery-charging
+    write /sys/class/leds/charging/max_brightness 0
+
+    chown system system /sys/devices/platform/kcal_ctrl.0/kcal
+    chown system system /sys/devices/platform/kcal_ctrl.0/kcal_ctrl
+
+    # subsystem ramdump collection
+    on property:persist.sys.qc.sub.rdump.on=*
     write /sys/module/subsystem_restart/parameters/enable_ramdumps ${persist.sys.qc.sub.rdump.on}
 
-# permissions for CapSense firmware update
+    # permissions for CapSense firmware update
     chown radio radio /sys/devices/cycapsense_prog.1/cycapsense_fw
     chmod 0220 /sys/devices/cycapsense_prog.1/cycapsense_fw
 
-# msm specific files that need to be created on /data
-on post-fs-data
+    # msm specific files that need to be created on /data
+    on post-fs-data
     # we will remap this as /mnt/sdcard with the sdcard fuse tool
     mkdir /data/media 0770 media_rw media_rw
     chown media_rw media_rw /data/media
@@ -391,6 +401,22 @@ service qmuxd /system/bin/qmuxd
 service netmgrd /system/bin/netmgrd
     class main
     group radio
+
+service imsqmidaemon /system/bin/imsqmidaemon
+    class main
+    user system
+    socket ims_qmid stream 0660 system radio
+    group radio log
+
+service imsdatadaemon /system/bin/imsdatadaemon
+    class main
+    user root
+    socket ims_datad stream 0660 system radio
+    group system wifi radio inet log
+    disabled
+
+on property:sys.ims.QMI_DAEMON_STATUS=1
+    start imsdatadaemon
 
 service sensors /system/bin/sensors.qcom
     class core
@@ -537,13 +563,14 @@ on property:persist.usb.chgdisabled=0
     write /sys/class/power_supply/battery/charging_enabled 1
 
 service qseecomd /system/bin/qseecomd
-   class core
-   user root
-   group root
+    class core
+    user root
+    group root
 
 service mpdecision /system/bin/mpdecision --avg_comp
-   class main
-   user root
+    class main
+    user root
+    disabled
 
 service ss_ramdump /system/bin/subsystem_ramdump
     class main
@@ -552,14 +579,14 @@ service ss_ramdump /system/bin/subsystem_ramdump
     disabled
 
 service thermal-engine /system/bin/thermal-engine
-   class main
-   user root
-   group root
+    class main
+    user root
+    group root
 
 service time_daemon /system/bin/time_daemon
-   class late_start
-   user root
-   group root
+    class late_start
+    user root
+    group root
 
 on property:init.svc.bootanim=stopped
     start usf-post-boot
@@ -592,14 +619,6 @@ service mmi-touch-sh /system/bin/sh /init.mmi.touch.sh atmel
     user root
     oneshot
 
-# bugreport is triggered by holding down volume down, volume up and power
-service bugreport /system/bin/dumpstate -d -p -B \
-        -o /data/data/com.android.shell/files/bugreports/bugreport
-    class main
-    disabled
-    oneshot
-    keycodes 114 115 116
-
 service mdm_helper_proxy /system/bin/mdm_helper_proxy
     class core
     user system
@@ -621,3 +640,7 @@ service atfwd /system/bin/ATFWD-daemon
     class late_start
     user system
     group system radio
+
+service cnd /system/bin/cnd
+    class late_start
+    socket cnd stream 660 root inet
