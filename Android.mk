@@ -23,7 +23,7 @@
 # *not* include it on all devices, so it is safe even with hardware-specific
 # components.
 
-ifneq ($(filter shamu, $(TARGET_DEVICE)),)
+ifeq ($(TARGET_DEVICE),shamu)
 
 LOCAL_PATH := $(call my-dir)
 
