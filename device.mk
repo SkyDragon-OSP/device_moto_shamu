@@ -174,7 +174,7 @@ PRODUCT_PACKAGES += \
     SnapdragonCamera
 
 PRODUCT_PROPERTY_OVERRIDES += \
-    persist.camera.HAL3.enabled=1 \
+    persist.camera.HAL1.enabled=1 \
     persist.camera.cpp.duplication=false
 
 PRODUCT_PROPERTY_OVERRIDES += \
