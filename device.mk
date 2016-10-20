@@ -163,19 +163,6 @@ PRODUCT_PACKAGES += \
     audio.usb.default \
     audio.r_submix.default \
     libaudio-resampler
-    camera.apq8084 \
-    libcamera \
-    libmm-qcamera \
-    libmmcamera_interface \
-    libmmcamera_interface2 \
-    libmmjpeg_interface \
-    libqomx_core \
-    mm-qcamera-app \
-    SnapdragonCamera
-
-PRODUCT_PROPERTY_OVERRIDES += \
-    persist.camera.HAL1.enabled=1 \
-    persist.camera.cpp.duplication=false
 
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.audio.monitorRotation=true
