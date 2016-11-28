@@ -50,7 +50,8 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     device/moto/shamu/media_profiles.xml:system/etc/media_profiles.xml \
     device/moto/shamu/media_codecs.xml:system/etc/media_codecs.xml \
-    device/moto/shamu/media_codecs_performance.xml:system/etc/media_codecs_performance.xml
+    device/moto/shamu/media_codecs_performance.xml:system/etc/media_codecs_performance.xml \
+    device/moto/shamu/apns-conf.xml:system/etc/apns-conf.xml
 
 PRODUCT_COPY_FILES += \
     device/moto/shamu/mixer_paths.xml:system/etc/mixer_paths.xml \
@@ -127,9 +128,6 @@ PRODUCT_PACKAGES := \
     wpa_supplicant \
     wpa_supplicant.conf
 
-PRODUCT_PACKAGES += \
-    AOSPLinks
-
 PRODUCT_PACKAGES += atmel.fw.apq8084
 
 # OEM Package for RIL
@@ -165,6 +163,11 @@ PRODUCT_PACKAGES += \
     libaudio-resampler
 
 PRODUCT_PROPERTY_OVERRIDES += \
+    media.aac_51_output_enabled=true \
+    persist.audio.dualmic.config=endfire \
+    persist.audio.fluence.voicecall=true \
+    persist.audio.fluence.voicerec=false \
+    persist.audio.fluence.speaker=false \
     ro.audio.monitorRotation=true
 
 # Audio effects

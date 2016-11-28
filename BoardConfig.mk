@@ -25,11 +25,12 @@ SDCLANG_PATH := prebuilts/clang/linux-x86/host/sdclang-3.8/bin
 ENABLE_CPUSETS := true
 
 TARGET_NO_BOOTLOADER := true
-CLANG_O3 := true
+O3_OPTS := true
 POLLY_OPTS := true
-STRICT_ALIASING := true
 GRAPHITE_OPTS := true
-ENABLE_GCCONLY := true
+STRICT_ALIASING := true
+TARGET_NO_BOOTLOADER := true
+
 
 BOARD_KERNEL_BASE := 0x00000000
 BOARD_KERNEL_PAGESIZE :=  2048
