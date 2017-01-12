@@ -19,16 +19,16 @@ TARGET_CPU_ABI2 := armeabi
 TARGET_ARCH := arm
 TARGET_ARCH_VARIANT := armv7-a-neon
 TARGET_CPU_VARIANT := krait
-SDCLANG := true
+#SDCLANG := true
 
-SDCLANG_PATH := prebuilts/clang/linux-x86/host/sdclang-3.8/bin
+#SDCLANG_PATH := prebuilts/clang/linux-x86/host/sdclang-3.8/bin
 ENABLE_CPUSETS := true
 
 TARGET_NO_BOOTLOADER := true
-O3_OPTS := true
-POLLY_OPTS := true
-GRAPHITE_OPTS := true
-STRICT_ALIASING := true
+#O3_OPTS := true
+#POLLY_OPTS := true
+#GRAPHITE_OPTS := true
+#STRICT_ALIASING := true
 TARGET_NO_BOOTLOADER := true
 
 

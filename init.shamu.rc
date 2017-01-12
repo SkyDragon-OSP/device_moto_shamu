@@ -26,6 +26,7 @@ on early-init
 
 on init
 
+
     mkdir /oem 0550 root root
 
     # Set permissions for persist partition
@@ -59,9 +60,6 @@ on fs
     setprop persist.data.wda.enable true
     setprop persist.data.df.agg.dl_pkt 10
     setprop persist.data.df.agg.dl_size 4096
-
-    # Adjust parameters for dm-verity device
-    write /sys/block/dm-0/queue/read_ahead_kb 2048
 
 on post-fs-data
     mkdir /tombstones/modem 0771 system system
@@ -114,6 +112,13 @@ on early-boot
     write /sys/bus/msm_subsys/devices/subsys3/recovery_policy "skip_restart"
 
 on boot
+    write /sys/block/mmcblk0/queue/nomerges 1
+    write /sys/block/mmcblk0/queue/rq_affinity 2
+    write /sys/block/mmcblk0/queue/add_random 0
+    write /sys/block/mmcblk0/queue/read_ahead_kb 1024
+
+    insmod /system/lib/modules/adsprpc.ko
+    insmod /system/lib/modules/mhi.ko
     chown bluetooth net_bt_stack /sys/module/bluetooth_power/parameters/power
     chown bluetooth net_bt_stack /sys/class/rfkill/rfkill0/type
     chown bluetooth net_bt_stack /sys/class/rfkill/rfkill0/state
@@ -240,50 +245,20 @@ on boot
     chown media media /sys/devices/c55_ctrl/gpio_core/value
     chown media media /sys/devices/c55_ctrl/gpio_reset/value
 
+    # Prevent permission denied error for telephony
+    chmod 0644 /proc/cmdline
+
     # LED permissions
-    chmod 664 /sys/class/leds/red/brightness
-    chmod 664 /sys/class/leds/green/brightness
-    chmod 664 /sys/class/leds/blue/brightness
+    chown system system /sys/class/leds/charging/brightness
+    chown system system /sys/class/leds/charging/max_brightness
+    write /sys/class/leds/charging/trigger battery-charging
+    write /sys/class/leds/charging/max_brightness 0
 
-#   Define TCP buffer sizes for various networks
-#   ReadMin, ReadInitial, ReadMax, WriteMin, WriteInitial, WriteMax,
-    setprop net.tcp.buffersize.default 4096,87380,524288,4096,16384,110208
-    setprop net.tcp.buffersize.lte     2097152,4194304,8388608,1048576,3145728,4194304
-    setprop net.tcp.buffersize.umts    4094,87380,110208,4096,16384,110208
-    setprop net.tcp.buffersize.hspa    4094,87380,1220608,4096,16384,1220608
-    setprop net.tcp.buffersize.hsupa   4094,87380,1220608,4096,16384,1220608
-    setprop net.tcp.buffersize.hsdpa   4094,87380,2441216,4096,16384,2441216
-    setprop net.tcp.buffersize.hspap   4094,87380,1220608,4096,16384,1220608
-    setprop net.tcp.buffersize.edge    4093,26280,35040,4096,16384,35040
-    setprop net.tcp.buffersize.gprs    4092,8760,11680,4096,8760,11680
-    setprop net.tcp.buffersize.evdo    4094,87380,524288,4096,16384,262144
+    chown system system /sys/devices/platform/kcal_ctrl.0/kcal
+    chown system system /sys/devices/platform/kcal_ctrl.0/kcal_ctrl
 
-#   Assign TCP buffer thresholds to be ceiling value of technology maximums
-#   Increased technology maximums should be reflected here.
-    write /proc/sys/net/core/rmem_max  8388608
-    write /proc/sys/net/core/wmem_max  8388608
-    
-# Leds
-    chown system system /sys/class/leds/red/on_off_ms
-    chown system system /sys/class/leds/green/on_off_ms
-    chown system system /sys/class/leds/blue/on_off_ms
-    chown system system /sys/class/leds/red/rgb_start
-
-# IO Enhancements
-    write /sys/block/mmcblk0/queue/rq_affinity 0
-    write /sys/block/mmcblk0/queue/scheduler bfq
-    write /sys/block/mmcblk0/queue/read_ahead_kb 1024
-
-# TapToWake
-    chown system system /sys/android_touch/wake_gestures
-    chown system system /sys/android_touch/doubletap2wake
-    chmod 0644 /sys/android_touch/wake_gestures
-    chmod 0644 /sys/android_touch/doubletap2wake
-    write /sys/android_touch/wake_gestures 1
-    write /sys/android_touch/doubletap2wake 1
-	
-# subsystem ramdump collection
-on property:persist.sys.qc.sub.rdump.on=*
+    # subsystem ramdump collection
+    on property:persist.sys.qc.sub.rdump.on=*
     write /sys/module/subsystem_restart/parameters/enable_ramdumps ${persist.sys.qc.sub.rdump.on}
 
 # permissions for CapSense firmware update
@@ -359,6 +334,9 @@ on post-fs-data
 
     setprop vold.post_fs_data_done 1
 
+    #Create a folder for SRS to be able to create a usercfg file
+    mkdir /data/data/media 0770 media media
+
     # NFC local data and nfcee xml storage
     mkdir /data/nfc 0770 nfc nfc
     mkdir /data/nfc/param 0770 nfc nfc
@@ -402,7 +380,7 @@ service bridgemgrd /system/bin/bridgemgrd
 # QMUX must be in multiple groups to support external process connections
 service qmuxd /system/bin/qmuxd
     class main
-    user root
+    user radio
     group radio audio bluetooth wakelock gps
 
 service netmgrd /system/bin/netmgrd
@@ -555,9 +533,6 @@ service bdAddrLoader /system/bin/bdAddrLoader -p ro.boot.btmacaddr -s -x
 on property:vold.decrypt=trigger_reset_main
     stop gnss-svcd
 
-on verity-logging
-    #exec u:r:slideshow:s0 -- /sbin/slideshow warning/verity_red_1 warning/verity_red_2
-
 # When QCA1530 is known not to present
 on property:persist.qca1530=no
    stop gnss-svcd
@@ -571,14 +546,6 @@ service mmi-touch-sh /system/bin/init.mmi.touch.sh atmel
     class main
     user root
     oneshot
-
-# bugreport is triggered by holding down volume down, volume up and power
-#service bugreport /system/bin/dumpstate -d -p -B -z \
-#        -o /data/user_de/0/com.android.shell/files/bugreports/bugreport
-#    class main
-#    disabled
-#    oneshot
-#    keycodes 114 115 116
 
 service mdm_helper_proxy /system/bin/mdm_helper_proxy
     class core
